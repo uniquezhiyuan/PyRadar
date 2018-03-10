@@ -1,7 +1,10 @@
 from PyRadar import Radar
+from PyRadar import ppi
 
-k = Radar('c:/data/', 'Z_RADR_I_Z9250_20160701234600_O_DOR_SA_CAP.bin')
-k.Name   # 名字
+k = Radar('c:/data/', 'Z_RADR_I_Z9250_20160701234600_O_DOR_SA_CAP.bin')  
+
+
+k.Name   # 文件名字，形如 Z_RADR_I_Z9250_20160701234600_O_DOR_SA_CAP
 k.RawData  # 原始数据
 k.Count  # 径向数据数量（= .bin文件大小/2432）
 k.RawArray  # 原始矩阵 共Count行
@@ -25,5 +28,16 @@ k.x  # 直角坐标系里的横坐标
 k.y  # 纵坐标
 k.z  # 竖坐标
 k.r  # 反射率值
-k.draw()  #画出0~1.5度仰角之间的所有反射率值
+k.elevation_list  # 该体扫模式下的仰角列表
+k.grid_data  # 返回标准化网格数据数组，并保存为.npz文件，网格为1000*1000*20,此属性计算时间稍长
+k.draw()  #快速画出0.5度仰角的所有反射率值
+k.ppi(0) # 画出给定仰角的ppi图像，参数浮点型
+k.rhi(0)  # 画出给定方位角rhi图像，参数浮点型
+k.cappi(0)  #画出给定高度cappi图像,参数整型，数值0—19之间
+k.points()  # 三维散点图，开始交互可视化
+k.surface()  # 三维等值面图，开始交互可视化
+
+
+ppi('c:/data/Z_RADR_I_Z9250_20160701234600_O_DOR_SA_CAP.bin')  # 快速绘制0.5度仰角ppi图像，大概5秒一张
+
 
