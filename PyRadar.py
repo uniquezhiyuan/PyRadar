@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from mayavi import mlab
 from scipy.interpolate import griddata
 import time
+import vtk
 
 class Radar:
 
@@ -134,8 +135,9 @@ class Radar:
         plt.title(self.Name)
         plt.contourf(x.reshape(int(len(x)/460), 460), y.reshape(int(len(y)/460), 460), r.reshape(int(len(z)/460), 460), cmap = 'jet')  # contourf jet gray
         plt.colorbar()
-        plt.savefig('C:/data/gui/temp/' + self.Name, dpi = 300)
-        plt.close()
+        #plt.savefig('C:/data/gui/temp/' + self.Name, dpi = 300)
+        #plt.close()
+        plt.show()
     
     def grey(self):
         x, y, z, r = self.x, self.y, self.z, self.r
@@ -144,8 +146,9 @@ class Radar:
         plt.title(self.Name)
         plt.contourf(x.reshape(int(len(x)/460), 460), y.reshape(int(len(y)/460), 460), r.reshape(int(len(z)/460), 460), cmap = 'gist_gray')  # contourf jet gray
         plt.colorbar()
-        plt.savefig('C:/data/img/Z9592' + self.Name, dpi = 300)
-        plt.close()
+        #plt.savefig('C:/data/img/Z9592' + self.Name, dpi = 300)
+        #plt.close()
+        plt.show()
     
     def get_elevation_list(self):
         if self.vcp[0] == 11:
@@ -177,6 +180,7 @@ class Radar:
         AllInfo[1].append(0)
         AllInfo[2].append(0)
         AllInfo[3].append(75)
+        
         while (len(AllInfo[0]))%460 != 0:    # 标准化为460倍数（补[0，0，0，0]法）
             AllInfo[0].append(0)
             AllInfo[1].append(0)
@@ -194,8 +198,9 @@ class Radar:
         plt.title(self.Name)
         plt.tricontourf(x, y, r, cmap = 'jet')  # contourf jet gray
         plt.colorbar()
-        plt.savefig('C:/data/gui/temp/ppi_ref/' + self.Name + '_ppi_' + str(elevation) + '.png', dpi = 300)
-        plt.close()
+        #plt.savefig('C:/data/gui/temp/ppi_ref/' + self.Name + '_ppi_' + str(elevation) + '.png', dpi = 300)
+        #plt.close()
+        plt.show()
 
     def rhi(self, azimuth):
         AllInfo = [[], [], [], []]  # 仰角 方位角 距离 反射率
@@ -229,8 +234,9 @@ class Radar:
         plt.title(self.Name)
         plt.tricontourf(y, z, r, cmap = 'jet')  # contourf jet gray
         plt.colorbar()
-        plt.savefig('C:/data/gui/temp/rhi_ref/' + self.Name + '_rhi_' + str(azimuth) + '.png', dpi = 300)
-        plt.close()
+        #plt.savefig('C:/data/gui/temp/rhi_ref/' + self.Name + '_rhi_' + str(azimuth) + '.png', dpi = 300)
+        #plt.close()
+        plt.show()
 
     def points(self):
         x=[]
@@ -248,20 +254,20 @@ class Radar:
         mlab.show()
 
     def grid(self):
-        GRID_RESOLUTION = 1000  # 网格分辨率，可修改
-
+        GRID_RESOLUTION = 500  # 网格分辨率，可修改
+        
         x, y, z, r = self.x, self.y, self.z, self.r
-        grid_x, grid_y, grid_z = np.mgrid[min(x):max(x):GRID_RESOLUTION*1j, min(y):max(y):GRID_RESOLUTION*1j, min(z):max(z):GRID_RESOLUTION/50*1j]  # 构建三维网格
-
+        grid_x, grid_y, grid_z = np.mgrid[min(x):max(x):GRID_RESOLUTION*1j, min(y):max(y):GRID_RESOLUTION*1j, min(z):max(z):GRID_RESOLUTION*1j]  # 构建三维网格，方形，体绘制适用
+        
         x = x[np.newaxis,:]
         y = y[np.newaxis,:]
         z = z[np.newaxis,:]
-
+        
         points = np.concatenate((x,y,z),axis=0).T
-
+        
         grid_r = griddata(points, r, (grid_x, grid_y, grid_z), method = 'nearest')  # 返回结果，三维数组
         np.savez(self.Name + '.npz', grid_array=grid_r)  # 保存为numpy数组
-        print('Data saved.')
+        print('Data has been saved in user\'s home directory.')
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
         return grid_r
 
@@ -270,7 +276,7 @@ class Radar:
         plt.style.use('dark_background')
         plt.subplot(1, 1, 1)
         plt.title(self.Name + '_' + str(height) + 'km')
-        plt.imshow(grid_r[:,:,height], cmap = 'jet')  # contourf jet gray
+        plt.imshow(grid_r[:,:,int(height / 20 * 500)], cmap = 'jet')  # contourf jet gray，网格点数500
         plt.colorbar()
         plt.show()
 
@@ -278,11 +284,89 @@ class Radar:
         grid_r = self.grid_data
         point = mlab.contour3d(grid_r, colormap = 'jet', contours=10, transparent =True )  # 三维等值面图
         mlab.show()
+    
+    def render(self):
+        WIDTH = 500
+        HEIGHT = 500
+        ALTITUDE = 500
+
+        grid = self.grid_data
+        grid_r = np.zeros([WIDTH, HEIGHT, ALTITUDE], dtype=np.uint8)
+        grid = np.rint(grid / 10) # 四舍五入取整
+
+        for i in range(WIDTH):
+            for j in range(HEIGHT):
+                for k in range(ALTITUDE):
+                    grid_r[i,j,k] = grid[i,j,k]
+
+        dataImporter = vtk.vtkImageImport()
+        data_string = grid_r.tostring()
+        dataImporter.CopyImportVoidPointer(data_string, len(data_string))
+        dataImporter.SetDataScalarTypeToUnsignedChar()
+        
+        dataImporter.SetNumberOfScalarComponents(1)
+        dataImporter.SetDataExtent(0, WIDTH-1, 0, HEIGHT-1, 0, ALTITUDE-1)
+        dataImporter.SetWholeExtent(0, WIDTH-1, 0, HEIGHT-1, 0, ALTITUDE-1)
+        
+        alphaChannelFunc = vtk.vtkPiecewiseFunction()  # 不透明度，值越大越不透明
+        
+        alphaChannelFunc.AddPoint(0, 0.00)
+        alphaChannelFunc.AddPoint(1, 0.02)
+        alphaChannelFunc.AddPoint(2, 0.02)
+        alphaChannelFunc.AddPoint(3, 0.1)
+        alphaChannelFunc.AddPoint(4, 0.1)
+        alphaChannelFunc.AddPoint(5, 0.6)
+        alphaChannelFunc.AddPoint(6, 0.6)
+
+        colorFunc = vtk.vtkColorTransferFunction()  # 设定颜色，RGB转浮点数
+        
+        colorFunc.AddRGBPoint(6, 1.0, 0.0, 0.0)
+        colorFunc.AddRGBPoint(5, 1.0, 0.4, 0.0)  #255，100，0 橙色
+        colorFunc.AddRGBPoint(4, 1.0, 1.0, 0.0)  # 255，255，0 黄色
+        colorFunc.AddRGBPoint(3, 0.4, 1.0, 0.0)  # 100，255，0
+        colorFunc.AddRGBPoint(2, 0.0, 1.0, 0.0)  # 0，255，0
+        colorFunc.AddRGBPoint(1, 0.0, 0.4, 1.0)  # 0，100，255
+        colorFunc.AddRGBPoint(0, 0.0, 0.0, 0.0)
+
+        
+        volumeProperty = vtk.vtkVolumeProperty()
+        volumeProperty.SetColor(colorFunc)
+        volumeProperty.SetScalarOpacity(alphaChannelFunc)
+        
+        compositeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+        volumeMapper = vtk.vtkVolumeRayCastMapper()
+        volumeMapper.SetVolumeRayCastFunction(compositeFunction)
+        volumeMapper.SetInputConnection(dataImporter.GetOutputPort())
+        
+        volume = vtk.vtkVolume()
+        volume.SetMapper(volumeMapper)
+        volume.SetProperty(volumeProperty)
+        
+        renderer = vtk.vtkRenderer() 
+        renderWin = vtk.vtkRenderWindow()
+        renderWin.AddRenderer(renderer)
+        renderInteractor = vtk.vtkRenderWindowInteractor()
+        renderInteractor.SetRenderWindow(renderWin)
+
+        renderer.AddVolume(volume)
+        renderer.SetBackground(0, 0, 0)
+        renderWin.SetSize(600, 600)
+
+        def exitCheck(obj, event):
+            if obj.GetEventPending() != 0:
+                obj.SetAbortRender(1)
+        
+        renderWin.AddObserver("AbortCheckEvent", exitCheck)
+        
+        #volumeProperty.ShadeOn()  # 是否显示阴影，不显示效果更佳
+        
+        renderInteractor.Initialize()
+        renderWin.Render()
+        renderInteractor.Start()
 
 
 
-
-# 0.5° 仰角速绘
+# 0.5° 仰角PPI速绘
 def ppi(absolute_path):
     Name = absolute_path[-46:-4]
     file = open(absolute_path, 'rb')
@@ -328,7 +412,10 @@ def ppi(absolute_path):
     plt.contourf(x.reshape(int(len(x)/460), 460), y.reshape(int(len(y)/460), 460), r.reshape(int(len(r)/460), 460), cmap = 'jet')  # contourf jet gray
     plt.colorbar()
     #plt.show()
-    plt.savefig('C:/data/gui/temp/animation/' + Name, dpi = 300)
-    plt.close()
+    #plt.savefig('C:/data/gui/temp/animation/' + Name, dpi = 300)
+    #plt.close()
+    plt.show()
+
+
 
 
