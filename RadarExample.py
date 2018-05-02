@@ -36,7 +36,7 @@ k.rhi(0)  # 画出给定方位角rhi图像，参数浮点型
 k.cappi(0)  #画出给定高度cappi图像,参数整型，数值0—19之间
 k.points()  # 三维散点图，开始交互可视化
 k.surface()  # 三维等值面图，开始交互可视化
-
+k.render()  #体绘制交互
 
 ppi('c:/data/Z_RADR_I_Z9250_20160701234600_O_DOR_SA_CAP.bin')  # 快速绘制0.5度仰角ppi图像，大概5秒一张
 
